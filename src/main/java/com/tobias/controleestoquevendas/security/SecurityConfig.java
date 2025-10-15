@@ -17,9 +17,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    public SecurityConfig(UserDetailsServiceImpl userDetailsService) {
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService, CustomAccessDeniedHandler customAccessDeniedHandler, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.userDetailsService = userDetailsService;
+        this.customAccessDeniedHandler = customAccessDeniedHandler;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
     // Password encoder
@@ -48,6 +52,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
         http
                 .csrf().disable()
+                .exceptionHandling(exceptions -> exceptions
+                        .accessDeniedHandler(customAccessDeniedHandler) // Customiza o 403 (Logado, mas sem ROLE)
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // <-- AQUI! Customiza o 401 (Não Logado)
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/clientes/**").hasAnyAuthority("ROLE_GERENTE", "ROLE_VENDEDOR")
