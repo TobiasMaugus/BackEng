@@ -4,6 +4,7 @@ import com.tobias.controleestoquevendas.dto.RegisterRequest;
 import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.repository.UserRepository;
 import com.tobias.controleestoquevendas.service.TokenService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -42,13 +43,23 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
+        // Verifica se o username já existe
+        if (userRepository.existsByUsername(req.username)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Erro: nome de usuário já existe");
+        }
+
+        // Cria novo usuário
         User user = new User();
         user.setUsername(req.username);
         user.setPassword(passwordEncoder.encode(req.password));
         user.setRole(req.role != null ? req.role.toUpperCase() : "VENDEDOR");
+
         userRepository.save(user);
-        return ResponseEntity.status(201).body("User registered successfully");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("Usuário registrado com sucesso");
     }
+
 
 
 

@@ -1,8 +1,11 @@
 package com.tobias.controleestoquevendas.controller;
 
 import com.tobias.controleestoquevendas.model.Cliente;
+import com.tobias.controleestoquevendas.repository.ClienteRepository;
+import com.tobias.controleestoquevendas.repository.UserRepository;
 import com.tobias.controleestoquevendas.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +17,19 @@ public class ClienteController {
 
     @Autowired
     private ClienteService service;
+    @Autowired
+    private ClienteRepository clienteRepository;
 
     // Create
     @PostMapping
-    public Cliente criarCliente(@RequestBody Cliente cliente) {
-        return service.criarCliente(cliente);
+    public ResponseEntity<?> criarCliente(@RequestBody Cliente cliente) {
+        if (clienteRepository.existsByCpfCnpj(cliente.getCpf())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Erro: já existe um cliente com esse CPF");
+        }
+
+        Cliente novo = clienteRepository.save(cliente);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novo);
     }
 
     // Read All

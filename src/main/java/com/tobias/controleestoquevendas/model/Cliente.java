@@ -27,4 +27,8 @@ public class Cliente {
 
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
+
+    public String getCpf(){
+        return cpfCnpj;
+    }
 }
