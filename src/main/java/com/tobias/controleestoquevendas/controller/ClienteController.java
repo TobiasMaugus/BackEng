@@ -2,7 +2,6 @@ package com.tobias.controleestoquevendas.controller;
 
 import com.tobias.controleestoquevendas.model.Cliente;
 import com.tobias.controleestoquevendas.repository.ClienteRepository;
-import com.tobias.controleestoquevendas.repository.UserRepository;
 import com.tobias.controleestoquevendas.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
