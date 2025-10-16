@@ -1,5 +1,6 @@
 package com.tobias.controleestoquevendas.service;
 
+import com.tobias.controleestoquevendas.security.CustomUserDetails;
 import io.jsonwebtoken.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -20,17 +21,22 @@ public class TokenService {
     private static final long EXPIRATION_TIME = 86400000; // 24 hours
 
     public String generateToken(Authentication authentication) {
-        org.springframework.security.core.userdetails.User userPrincipal =
-                (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
+
+        // CORREÇÃO: Faça o cast para o seu objeto CustomUserDetails
+        CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
 
         // Extrai roles como lista de strings
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(a -> a.getAuthority())
                 .toList();
 
+        // Opcional, mas útil: Incluir o ID do usuário (vendedor) no token
+        Long userId = userPrincipal.getId();
+
         return Jwts.builder()
-                .setSubject(authentication.getName())
-                .claim("roles", roles) // ✅ salva como lista simples
+                .setSubject(authentication.getName()) // authentication.getName() é o username/login
+                .claim("id", userId) // Adicionando o ID da entidade
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(SignatureAlgorithm.HS256, SECRET_KEY)

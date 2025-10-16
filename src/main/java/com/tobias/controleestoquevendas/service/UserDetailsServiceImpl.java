@@ -2,6 +2,7 @@ package com.tobias.controleestoquevendas.service;
 
 import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.repository.UserRepository;
+import com.tobias.controleestoquevendas.security.CustomUserDetails;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +22,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = repository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole()) // GERENTE ou VENDEDOR
-                .build();
+        // Retorna o objeto customizado que contém o ID
+        return new CustomUserDetails(user);
     }
 }

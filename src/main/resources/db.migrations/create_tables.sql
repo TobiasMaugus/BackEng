@@ -59,3 +59,6 @@ CREATE TABLE venda_produto (
                                FOREIGN KEY (venda_id) REFERENCES vendas(id) ON DELETE CASCADE,
                                FOREIGN KEY (produto_id) REFERENCES produtos(id)
 );
+
+ALTER TABLE users
+    MODIFY COLUMN role VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL;

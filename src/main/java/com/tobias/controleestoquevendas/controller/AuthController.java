@@ -7,11 +7,13 @@ import com.tobias.controleestoquevendas.service.TokenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -33,12 +35,34 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody User loginRequest) {
-        var authentication = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
-        );
-        var token = tokenService.generateToken(authentication);
-        return ResponseEntity.ok(token);
+    public ResponseEntity<?> login(@RequestBody User loginRequest) {
+
+        try {
+            // Tenta autenticar
+            var authentication = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+            );
+
+            // Se bem-sucedido, gera o token (lógica do tokenService não é alterada)
+            var token = tokenService.generateToken(authentication);
+
+            // Retorna o token com status 200 OK
+            return ResponseEntity.ok(token);
+
+        } catch (BadCredentialsException e) {
+            // Captura a exceção quando username ou senha estão incorretos
+
+            // Retorna 401 Unauthorized com uma mensagem de erro clara em formato JSON
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Credenciais inválidas. Verifique o nome de usuário e a senha."));
+
+        } catch (Exception e) {
+            // Captura outras possíveis exceções (ex: usuário não encontrado, se não for tratado no service)
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Falha na autenticação: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/register")

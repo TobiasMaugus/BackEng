@@ -53,14 +53,18 @@ public class SecurityConfig {
         http
                 .csrf().disable()
                 .exceptionHandling(exceptions -> exceptions
-                        .accessDeniedHandler(customAccessDeniedHandler) // Customiza o 403 (Logado, mas sem ROLE)
-                        .authenticationEntryPoint(customAuthenticationEntryPoint) // <-- AQUI! Customiza o 401 (Não Logado)
+                        .accessDeniedHandler(customAccessDeniedHandler)
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/clientes/**").hasAnyAuthority("ROLE_GERENTE", "ROLE_VENDEDOR")
-                        .requestMatchers(HttpMethod.GET, "/produtos/**").hasAnyAuthority("ROLE_GERENTE", "ROLE_VENDEDOR")
-                        .requestMatchers("/produtos/**").hasAnyAuthority("ROLE_GERENTE")
+                        .requestMatchers("/clientes/**").hasAnyAuthority("GERENTE", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/produtos/**").hasAnyAuthority("GERENTE", "VENDEDOR")
+                        .requestMatchers("/produtos/**").hasAnyAuthority("GERENTE")
+                        .requestMatchers(HttpMethod.GET, "/vendas/**").hasAnyAuthority("GERENTE", "VENDEDOR")
+                        .requestMatchers(HttpMethod.POST, "/vendas").hasAnyAuthority("GERENTE", "VENDEDOR")
+                        .requestMatchers(HttpMethod.PUT, "/vendas/**").hasAnyAuthority("GERENTE")
+                        .requestMatchers(HttpMethod.DELETE, "/vendas/**").hasAnyAuthority("GERENTE")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
