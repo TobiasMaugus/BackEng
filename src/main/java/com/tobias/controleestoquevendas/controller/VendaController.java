@@ -96,8 +96,11 @@ public class VendaController {
     // 3. LER VENDAS DE UM CLIENTE ESPECÍFICO
     // ---------------------------------------------------------------------
     @GetMapping("/cliente/{clienteId}")
-    public List<Venda> listarVendasPorCliente(@PathVariable Long clienteId) {
+    public List<VendaResponseDTO> listarVendasPorCliente(@PathVariable Long clienteId) {
+
+        List<VendaResponseDTO> vendas = vendaService.listarVendasPorCliente(clienteId);
         return vendaService.listarVendasPorCliente(clienteId);
+
     }
 
     @GetMapping("/{id}")

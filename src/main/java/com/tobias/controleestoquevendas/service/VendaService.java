@@ -106,9 +106,17 @@ public class VendaService {
     // ==============================================
     // 4. R - READ (Listar por Cliente)
     // ==============================================
-    public List<Venda> listarVendasPorCliente(Long clienteId) {
-        // Usa o Query Method definido no VendaRepository
-        return vendaRepository.findByClienteId(clienteId);
+    @Transactional
+    public List<VendaResponseDTO> listarVendasPorCliente(Long clienteId) {
+
+        // 1. O Repositório deve retornar uma lista de Venda
+        List<Venda> vendasList = vendaRepository.findByClienteId(clienteId);
+        // Lembre-se que o findByClienteId deve estar no seu VendaRepository
+
+        // 2. Mapeia a lista de Venda para a lista de VendaResponseDTO
+        return vendasList.stream()
+                .map(VendaResponseDTO::new)
+                .collect(Collectors.toList());
     }
 
     @Transactional // Garante que as relações (Cliente, Vendedor, Itens) sejam carregadas.
