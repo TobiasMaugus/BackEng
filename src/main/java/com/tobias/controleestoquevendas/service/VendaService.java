@@ -2,15 +2,20 @@ package com.tobias.controleestoquevendas.service;
 
 import com.tobias.controleestoquevendas.dto.ItemVendaRequestDTO;
 import com.tobias.controleestoquevendas.dto.VendaRequestDTO;
+import com.tobias.controleestoquevendas.dto.VendaResponseDTO;
 import com.tobias.controleestoquevendas.exception.EstoqueInsuficienteException;
 import com.tobias.controleestoquevendas.exception.ResourceNotFoundException;
 import com.tobias.controleestoquevendas.model.*;
 import com.tobias.controleestoquevendas.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +70,29 @@ public class VendaService {
 
     public Optional<Venda> buscarPorId(Long id) {
         return vendaRepository.findById(id);
+    }
+    @Transactional
+    public Page<VendaResponseDTO> listarTodasVendasPaginado(Pageable pageable) {
+
+        // 1. Busque a página de entidades Venda (no JPA Repository)
+        Page<Venda> vendasPage = vendaRepository.findAll(pageable);
+
+        // 2. Mapeie a Page<Venda> para Page<VendaResponseDTO>
+        return vendasPage.map(VendaResponseDTO::new);
+    }
+
+    @Transactional
+    public List<VendaResponseDTO> listarVendasPorPeriodo(
+            LocalDateTime dataInicial,
+            LocalDateTime dataFinal) {
+
+        // 1. Chame o novo método do Repository
+        List<Venda> vendasList = vendaRepository.findByDataVendaBetween(dataInicial, dataFinal);
+
+        // 2. Mapeie a List<Venda> para List<VendaResponseDTO>
+        return vendasList.stream()
+                .map(VendaResponseDTO::new)
+                .collect(Collectors.toList());
     }
 
     // ==============================================

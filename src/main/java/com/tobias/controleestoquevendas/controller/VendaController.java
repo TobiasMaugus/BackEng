@@ -1,23 +1,27 @@
 package com.tobias.controleestoquevendas.controller;
 
 import com.tobias.controleestoquevendas.dto.VendaRequestDTO;
+import com.tobias.controleestoquevendas.dto.VendaResponseDTO;
 import com.tobias.controleestoquevendas.exception.EstoqueInsuficienteException;
 import com.tobias.controleestoquevendas.exception.ResourceNotFoundException;
 import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.model.Venda;
 import com.tobias.controleestoquevendas.repository.UserRepository;
-import com.tobias.controleestoquevendas.security.CustomUserDetails;
 import com.tobias.controleestoquevendas.service.VendaService;
+import org.springframework.data.domain.Page;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -52,6 +56,28 @@ public class VendaController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
+    }
+
+    @GetMapping // Rota base: /vendas?page=0&size=10
+    public Page<VendaResponseDTO> listarTodasVendasPaginado(
+            // Define o Pageable: page=0 (página inicial), size=10 (10 itens por página), sort=dataVenda,desc
+            @PageableDefault(page = 0, size = 10, sort = "dataVenda", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        return vendaService.listarTodasVendasPaginado((org.springframework.data.domain.Pageable) pageable);
+    }
+
+    @GetMapping("/periodo")
+    public List<VendaResponseDTO> listarVendasPorPeriodo(
+            @RequestParam("dataInicial")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) // Ex: 2025-01-01T00:00:00
+            LocalDateTime dataInicial,
+
+            @RequestParam("dataFinal")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime dataFinal) {
+
+        return vendaService.listarVendasPorPeriodo(dataInicial, dataFinal);
     }
 
     // ---------------------------------------------------------------------
