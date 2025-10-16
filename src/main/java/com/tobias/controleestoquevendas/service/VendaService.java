@@ -111,6 +111,16 @@ public class VendaService {
         return vendaRepository.findByClienteId(clienteId);
     }
 
+    @Transactional // Garante que as relações (Cliente, Vendedor, Itens) sejam carregadas.
+    public VendaResponseDTO buscarVendaPorId(Long id) {
+
+        Venda venda = vendaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Venda não encontrada com ID: " + id));
+
+        // Mapeia a entidade Venda para o DTO de resposta
+        return new VendaResponseDTO(venda);
+    }
+
     // ==============================================
     // 5. R - READ (Calcular Valor Total por Vendedor)
     // **NOTA:** Este método idealmente usaria uma query otimizada no Repository.

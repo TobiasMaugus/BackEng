@@ -61,7 +61,12 @@ public class SecurityConfig {
                         .requestMatchers("/clientes/**").hasAnyAuthority("GERENTE", "VENDEDOR")
                         .requestMatchers(HttpMethod.GET, "/produtos/**").hasAnyAuthority("GERENTE", "VENDEDOR")
                         .requestMatchers("/produtos/**").hasAnyAuthority("GERENTE")
-                        .requestMatchers(HttpMethod.GET, "/vendas/**").hasAnyAuthority("GERENTE", "VENDEDOR")
+                                .requestMatchers(HttpMethod.GET, "/vendas/meus").hasAnyAuthority("GERENTE", "VENDEDOR") // 1. Mais específico (minhas vendas)
+                                .requestMatchers(HttpMethod.GET, "/vendas/periodo").hasAnyAuthority("GERENTE")           // 2. Específico para relatório global
+                                .requestMatchers(HttpMethod.GET, "/vendas/{id}").hasAnyAuthority("GERENTE")
+                                .requestMatchers(HttpMethod.GET, "/vendas/total/meu").hasAnyAuthority("GERENTE", "VENDEDOR")
+                                .requestMatchers(HttpMethod.GET, "/vendas/cliente/{clienteId}").hasAnyAuthority("GERENTE", "VENDEDOR")
+                                .requestMatchers(HttpMethod.GET, "/vendas").hasAnyAuthority("GERENTE")
                         .requestMatchers(HttpMethod.POST, "/vendas").hasAnyAuthority("GERENTE", "VENDEDOR")
                         .requestMatchers(HttpMethod.PUT, "/vendas/**").hasAnyAuthority("GERENTE")
                         .requestMatchers(HttpMethod.DELETE, "/vendas/**").hasAnyAuthority("GERENTE")

@@ -100,6 +100,18 @@ public class VendaController {
         return vendaService.listarVendasPorCliente(clienteId);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<VendaResponseDTO> buscarVendaPorId(@PathVariable Long id) {
+        try {
+            VendaResponseDTO vendaDTO = vendaService.buscarVendaPorId(id);
+            return ResponseEntity.ok(vendaDTO);
+
+        } catch (ResourceNotFoundException e) {
+            // Se a venda não for encontrada, retorna 404 Not Found
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     // ---------------------------------------------------------------------
     // 4. VALOR TOTAL DAS VENDAS DO VENDEDOR LOGADO
     // ---------------------------------------------------------------------
