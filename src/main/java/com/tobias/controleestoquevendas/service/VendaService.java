@@ -13,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class VendaService {
@@ -110,50 +112,80 @@ public class VendaService {
         User vendedor = userRepository.findById(vendedorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vendedor não encontrado com ID: " + vendedorId));
 
-        // 1️⃣ Devolve o estoque dos itens antigos
-        for (VendaProduto item : vendaExistente.getItens()) {
-            Produto produto = item.getProduto();
-            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + item.getQuantidade());
-            produtoRepository.save(produto);
-        }
+        // Mapeia os itens antigos da venda por ID do Produto para fácil acesso
+        Map<Long, VendaProduto> itensAntigosMap = vendaExistente.getItens().stream()
+                .collect(Collectors.toMap(
+                        item -> item.getProduto().getId(),
+                        item -> item
+                ));
 
-        // 2️⃣ Limpa a lista de itens **sem substituir a referência**
-        vendaExistente.getItens().clear();
+        // Lista para armazenar os novos itens de VendaProduto a serem persistidos
+        List<VendaProduto> novosItensVenda = new ArrayList<>();
+        BigDecimal novoValorTotal = BigDecimal.ZERO;
 
-        // 3️⃣ Atualiza cliente e vendedor
-        vendaExistente.setCliente(novoCliente);
-        vendaExistente.setVendedor(vendedor);
-
-        // 4️⃣ Adiciona os novos itens na lista existente
-        BigDecimal total = BigDecimal.ZERO;
+        // 1. Processa os itens na requisição (vendaDTO)
         for (ItemVendaRequestDTO itemDTO : vendaDTO.getItens()) {
+
             Produto produto = produtoRepository.findById(itemDTO.getProdutoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Produto não encontrado com ID: " + itemDTO.getProdutoId()));
 
-            if (produto.getQuantidadeEstoque() < itemDTO.getQuantidade()) {
-                throw new IllegalArgumentException("Estoque insuficiente para o produto: " + produto.getNome());
+            VendaProduto itemOriginal = itensAntigosMap.get(produto.getId());
+
+            int quantidadeAntiga = (itemOriginal != null) ? itemOriginal.getQuantidade() : 0;
+            int quantidadeNova = itemDTO.getQuantidade();
+
+            // 2. CALCULA A DIFERENÇA DE ESTOQUE
+            // Se o valor for POSITIVO, é a quantidade que precisa ser DEVOLVIDA ao estoque.
+            // Se o valor for NEGATIVO, é a quantidade que precisa ser RETIRADA do estoque.
+            int ajusteEstoque = quantidadeAntiga - quantidadeNova;
+
+            // 3. VERIFICA ESTOQUE (só é necessário verificar se a quantidade nova for MAIOR que a antiga)
+            if (ajusteEstoque < 0) { // Se o ajuste for negativo, significa que a venda aumentou
+                // O estoque atual + o ajuste (que é negativo) deve ser >= 0
+                if (produto.getQuantidadeEstoque() + ajusteEstoque < 0) {
+                    throw new EstoqueInsuficienteException("Estoque insuficiente para o produto: " + produto.getNome());
+                }
             }
 
-            // Baixa no estoque
-            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() - itemDTO.getQuantidade());
-            produtoRepository.save(produto);
+            // 4. APLICA O AJUSTE E SALVA O PRODUTO
+            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + ajusteEstoque);
+            produtoRepository.save(produto); // Persiste a alteração de estoque
 
-            // Cria item de venda e adiciona à lista existente
+            // 5. CRIA O NOVO ITEM DE VENDA
             VendaProduto vendaProduto = new VendaProduto();
             vendaProduto.setVenda(vendaExistente);
             vendaProduto.setProduto(produto);
-            vendaProduto.setQuantidade(itemDTO.getQuantidade());
+            vendaProduto.setQuantidade(quantidadeNova);
             vendaProduto.setPrecoUnitario(produto.getPreco());
-
-            // Cria ID composto
             vendaProduto.setId(new VendaProdutoId(vendaExistente.getId(), produto.getId()));
 
-            vendaExistente.getItens().add(vendaProduto);
+            novosItensVenda.add(vendaProduto);
+            novoValorTotal = novoValorTotal.add(produto.getPreco().multiply(BigDecimal.valueOf(quantidadeNova)));
 
-            total = total.add(produto.getPreco().multiply(BigDecimal.valueOf(itemDTO.getQuantidade())));
+            // Remove o item do mapa para saber quais itens foram removidos da venda
+            itensAntigosMap.remove(produto.getId());
         }
 
-        vendaExistente.setValorTotal(total);
+        // 6. TRATA ITENS REMOVIDOS DA VENDA ORIGINAL
+        // Os itens que sobraram no 'itensAntigosMap' foram removidos da vendaDTO
+        for (VendaProduto itemRemovido : itensAntigosMap.values()) {
+            Produto produto = itemRemovido.getProduto();
+            // Devolve a quantidade TOTAL do item removido
+            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + itemRemovido.getQuantidade());
+            produtoRepository.save(produto);
+        }
+
+        // 7. ATUALIZA A VENDA EXISTENTE
+        vendaExistente.setCliente(novoCliente);
+        vendaExistente.setVendedor(vendedor);
+        vendaExistente.setValorTotal(novoValorTotal);
+
+        // **IMPORTANTE**: Limpa e adiciona os novos itens.
+        // Isso garante que o Hibernate/JPA trate a remoção dos itens antigos
+        // e a persistência dos novos (Requer @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+        // no campo 'itens' do modelo Venda).
+        vendaExistente.getItens().clear();
+        vendaExistente.getItens().addAll(novosItensVenda);
 
         return vendaRepository.save(vendaExistente);
     }

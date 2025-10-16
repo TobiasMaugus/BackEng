@@ -1,6 +1,7 @@
 package com.tobias.controleestoquevendas.controller;
 
 import com.tobias.controleestoquevendas.dto.VendaRequestDTO;
+import com.tobias.controleestoquevendas.exception.EstoqueInsuficienteException;
 import com.tobias.controleestoquevendas.exception.ResourceNotFoundException;
 import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.model.Venda;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/vendas")
@@ -30,7 +32,7 @@ public class VendaController {
     UserRepository userRepository;
     // --- C - Create (POST) ---
     @PostMapping
-    public ResponseEntity<Venda> criarVenda(@RequestBody VendaRequestDTO vendaDTO) {
+    public ResponseEntity<?> criarVenda(@RequestBody VendaRequestDTO vendaDTO) {
         try {
             // Pega o usuário logado a partir do contexto
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -42,7 +44,11 @@ public class VendaController {
 
             Venda novaVenda = vendaService.criarVenda(vendaDTO, vendedorId);
             return ResponseEntity.status(HttpStatus.CREATED).body(novaVenda);
-
+        } catch (EstoqueInsuficienteException e) {
+            // 2. Captura a exceção específica de estoque
+            // Retorna 400 Bad Request com uma mensagem de erro detalhada em JSON
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
@@ -86,23 +92,34 @@ public class VendaController {
     // 5. ATUALIZAR UMA VENDA
     // ---------------------------------------------------------------------
     @PutMapping("/{id}")
-    public ResponseEntity<Venda> atualizarVenda(
+    public ResponseEntity<?> atualizarVenda(
             @PathVariable Long id,
             @RequestBody VendaRequestDTO vendaDTO
     ) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();
+            // Assumindo que o UserRepository está injetado e User model tem o ID
             User user = userRepository.findByUsername(username).orElseThrow();
 
             Venda vendaAtualizada = vendaService.atualizarVenda(id, vendaDTO, user.getId());
             return ResponseEntity.ok(vendaAtualizada);
 
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
+            // Trata Venda, Cliente ou Produto não encontrado (404)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+
+        } catch (EstoqueInsuficienteException e) {
+            // Trata erro de estoque (400)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            // ✅ CORREÇÃO: Captura a exceção desconhecida e retorna o corpo JSON
+            // Retorna a mensagem da exceção, que revelará o erro real
+            e.printStackTrace(); // Mantenha isso para debug no console
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Falha na atualização da venda: " + e.getMessage()));
         }
     }
 
