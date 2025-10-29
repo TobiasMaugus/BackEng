@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/auth/role").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/clientes/**").hasAnyAuthority("GERENTE", "VENDEDOR")
                         .requestMatchers(HttpMethod.GET, "/produtos/**").hasAnyAuthority("GERENTE", "VENDEDOR")

@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -95,4 +98,26 @@ public class AuthController {
                 .toList();
     }
 
+    @GetMapping("/role")
+    public ResponseEntity<String> getRoleUsuarioLogado() {
+
+        // 1. Obtém o objeto Authentication do contexto de segurança
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            // Caso o usuário não esteja autenticado (embora o Spring Security deve bloquear)
+            return ResponseEntity.status(401).body("Usuário não autenticado.");
+        }
+
+        // 2. Obtém as permissões (autoridades) do usuário.
+        // No seu caso, a ROLE é a principal autoridade.
+        String role = authentication.getAuthorities().stream()
+                // Pega a primeira autoridade encontrada (que deve ser a ROLE, ex: GERENTE, VENDEDOR)
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                // Se por algum motivo não tiver, retorna uma string padrão
+                .orElse("ROLE_NAO_ENCONTRADA");
+
+        return ResponseEntity.ok(role);
+    }
 }
