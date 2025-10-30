@@ -4,6 +4,7 @@ import com.tobias.controleestoquevendas.dto.RegisterRequest;
 import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.repository.UserRepository;
 import com.tobias.controleestoquevendas.service.TokenService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,10 +14,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -34,6 +37,22 @@ public class AuthController {
         this.tokenService = tokenService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    private Map<String, String> formatarErros(BindingResult bindingResult) {
+        // Retorna um Map onde a chave é o nome do campo e o valor é a mensagem de erro.
+        return bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        // Chave: Nome do campo com erro (ex: "nome", "cpf", "quantidade")
+                        fieldError -> fieldError.getField(),
+
+                        // Valor: Mensagem de erro (ex: "O nome é obrigatório")
+                        fieldError -> fieldError.getDefaultMessage(),
+
+                        // Merger (caso um campo tenha múltiplas anotações que falharam):
+                        // Mantém a primeira mensagem de erro encontrada.
+                        (existing, replacement) -> existing
+                ));
     }
 
 
@@ -69,7 +88,10 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest req, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
         // Verifica se o username já existe
         if (userRepository.existsByUsername(req.username)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -80,7 +102,7 @@ public class AuthController {
         User user = new User();
         user.setUsername(req.username);
         user.setPassword(passwordEncoder.encode(req.password));
-        user.setRole(req.role != null ? req.role.toUpperCase() : "VENDEDOR");
+        user.setRole(req.role.toUpperCase());
 
         userRepository.save(user);
         return ResponseEntity.status(HttpStatus.CREATED)
