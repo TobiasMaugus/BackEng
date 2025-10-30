@@ -3,12 +3,16 @@ package com.tobias.controleestoquevendas.controller;
 import com.tobias.controleestoquevendas.model.Produto;
 import com.tobias.controleestoquevendas.repository.ProdutoRepository;
 import com.tobias.controleestoquevendas.service.ProdutoService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/produtos")
@@ -20,9 +24,22 @@ public class ProdutoController {
     @Autowired
     private ProdutoRepository produtoRepository;
 
+    private Map<String, String> formatarErros(BindingResult bindingResult) {
+        return bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        fieldError -> fieldError.getField(),
+                        fieldError -> fieldError.getDefaultMessage(),
+                        (existing, replacement) -> existing
+                ));
+    }
+
     // --- C - Create (POST) ---
     @PostMapping
-    public ResponseEntity<?> criarProduto(@RequestBody Produto produto) {
+    public ResponseEntity<?> criarProduto(@RequestBody @Valid Produto produto, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
+
         if (produtoRepository.existsByNome(produto.getNome())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Erro: já existe um produto com o nome '" + produto.getNome() + "'.");
@@ -56,7 +73,10 @@ public class ProdutoController {
 
     // --- U - Update (PUT) ---
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizarProduto(@PathVariable Long id, @RequestBody Produto produtoAtualizado) {
+    public ResponseEntity<?> atualizarProduto(@PathVariable Long id, @RequestBody @Valid Produto produtoAtualizado, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
         return service.buscarPorId(id).map(produtoExistente -> {
 
             // Verifica se o nome foi alterado para um nome que já existe,
