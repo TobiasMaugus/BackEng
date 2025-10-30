@@ -2,6 +2,8 @@ package com.tobias.controleestoquevendas.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.validation.constraints.NotBlank;
+import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDateTime;
 
@@ -16,19 +18,20 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "O nome é obrigatório")
     @Column(nullable = false, length = 100)
     private String nome;
 
-    @Column(unique = true, name="cpf_cnpj", length = 20)
-    private String cpfCnpj;
+    @NotBlank(message = "O CPF é obrigatório")
+    @Column(unique = true, name="cpf", length = 20)
+    @CPF(message = "O CPF fornecido é inválido.")
+    private String cpf;
 
+    @NotBlank(message = "O telefone é obrigatório")
     @Column(length = 20)
     private String telefone;
 
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    public String getCpf(){
-        return cpfCnpj;
-    }
 }

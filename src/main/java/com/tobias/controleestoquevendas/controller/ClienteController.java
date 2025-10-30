@@ -3,12 +3,17 @@ package com.tobias.controleestoquevendas.controller;
 import com.tobias.controleestoquevendas.model.Cliente;
 import com.tobias.controleestoquevendas.repository.ClienteRepository;
 import com.tobias.controleestoquevendas.service.ClienteService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/clientes")
@@ -19,10 +24,23 @@ public class ClienteController {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    private Map<String, String> formatarErros(BindingResult bindingResult) {
+        return bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        fieldError -> fieldError.getField(),
+                        fieldError -> fieldError.getDefaultMessage(),
+                        (existing, replacement) -> existing // Mantém a primeira mensagem se houver duplicidade
+                ));
+    }
+
     // Create
     @PostMapping
-    public ResponseEntity<?> criarCliente(@RequestBody Cliente cliente) {
-        if (clienteRepository.existsByCpfCnpj(cliente.getCpf())) {
+    public ResponseEntity<?> criarCliente(@Valid @RequestBody Cliente cliente, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
+
+        if (clienteRepository.existsByCpf(cliente.getCpf())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Erro: já existe um cliente com esse CPF");
         }
@@ -53,10 +71,13 @@ public class ClienteController {
 
     // Update
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> atualizarCliente(@PathVariable Long id, @RequestBody Cliente clienteAtualizado) {
+    public ResponseEntity<?> atualizarCliente(@PathVariable Long id, @RequestBody @Valid Cliente clienteAtualizado, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
         return service.buscarPorId(id).map(cliente -> {
             cliente.setNome(clienteAtualizado.getNome());
-            cliente.setCpfCnpj(clienteAtualizado.getCpfCnpj());
+            cliente.setCpf(clienteAtualizado.getCpf());
             cliente.setTelefone(clienteAtualizado.getTelefone());
             Cliente atualizado = service.atualizarCliente(cliente);
             return ResponseEntity.ok(atualizado);
