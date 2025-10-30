@@ -8,6 +8,7 @@ import com.tobias.controleestoquevendas.model.User;
 import com.tobias.controleestoquevendas.model.Venda;
 import com.tobias.controleestoquevendas.repository.UserRepository;
 import com.tobias.controleestoquevendas.service.VendaService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
@@ -24,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/vendas")
@@ -34,9 +37,29 @@ public class VendaController {
 
     @Autowired
     UserRepository userRepository;
+
+    private Map<String, String> formatarErros(BindingResult bindingResult) {
+        // Retorna um Map onde a chave é o nome do campo e o valor é a mensagem de erro.
+        return bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        // Chave: Nome do campo com erro (ex: "nome", "cpf", "quantidade")
+                        fieldError -> fieldError.getField(),
+
+                        // Valor: Mensagem de erro (ex: "O nome é obrigatório")
+                        fieldError -> fieldError.getDefaultMessage(),
+
+                        // Merger (caso um campo tenha múltiplas anotações que falharam):
+                        // Mantém a primeira mensagem de erro encontrada.
+                        (existing, replacement) -> existing
+                ));
+    }
+
     // --- C - Create (POST) ---
     @PostMapping
-    public ResponseEntity<?> criarVenda(@RequestBody VendaRequestDTO vendaDTO) {
+    public ResponseEntity<?> criarVenda(@RequestBody @Valid VendaRequestDTO vendaDTO, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
         try {
             // Pega o usuário logado a partir do contexto
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -135,8 +158,12 @@ public class VendaController {
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizarVenda(
             @PathVariable Long id,
-            @RequestBody VendaRequestDTO vendaDTO
+            @RequestBody @Valid VendaRequestDTO vendaDTO,
+            BindingResult bindingResult
     ) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(formatarErros(bindingResult));
+        }
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String username = auth.getName();

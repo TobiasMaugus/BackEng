@@ -10,6 +10,7 @@ public class ItemVendaRequestDTO {
     @NotNull(message = "O ID do produto é obrigatório.")
     private Long produtoId;
 
+    @NotNull(message = "A quantidade é obrigatória.")
     @Min(value = 1, message = "A quantidade deve ser de no mínimo 1.")
     private Integer quantidade;
 }
